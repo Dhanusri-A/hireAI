@@ -11,6 +11,7 @@ import Notifications from "./screens/Candidate/components/CandidateNotifications
 import CandidateJobDetails from "./screens/Candidate/components/CandidateJobDetails";
 import CandidateProfileEdit from "./screens/Candidate/components/CandidateProfileEdit";
 import GoogleCallback from "./screens/Login/GoogleCallback";
+import MicrosoftCallback from "./screens/Login/MicrosoftCallback";
 
 // Candidate Auth
 import CandidateSignIn from "./screens/Login/CandidateSignin";
@@ -57,6 +58,8 @@ function AppRoutes() {
       <Route path="/recruiter-signup" element={<RecruiterSignUp />} />
       <Route path="/auth/google/success" element={<GoogleCallback />} />
       <Route path="/auth/google/error" element={<GoogleCallback />} />
+      <Route path="/auth/microsoft/success" element={<MicrosoftCallback />} />
+      <Route path="/auth/microsoft/error" element={<MicrosoftCallback />} />
 
       {/* ==================== CANDIDATE ROUTES ==================== */}
 

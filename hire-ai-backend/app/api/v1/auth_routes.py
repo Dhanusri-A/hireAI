@@ -3,6 +3,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import timedelta
 import httpx
+import jwt
 from urllib.parse import urlencode
 
 from app.db.base import get_db
@@ -77,7 +78,7 @@ async def google_login():
     }
     
     google_auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
-    print(f"Redirecting to: {google_auth_url}")
+    print(f"Redirecting to Google: {google_auth_url}")
     return RedirectResponse(url=google_auth_url, status_code=302)
 
 
@@ -99,7 +100,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
             )
             
             if token_response.status_code != 200:
-                raise HTTPException(status_code=400, detail="Failed to get access token")
+                raise HTTPException(status_code=400, detail=f"Failed to get access token: {token_response.text}")
             
             token_data = token_response.json()
             access_token = token_data.get("access_token")
@@ -151,6 +152,97 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         
         # Redirect to frontend with token
         frontend_url = f"http://localhost:5173/auth/google/success?token={jwt_token}"
+        return RedirectResponse(url=frontend_url)
+    
+    except Exception as e:
+        error_url = f"http://localhost:5173/recruiter-signin?error={str(e)}"
+        return RedirectResponse(url=error_url)
+
+# Microsoft OAuth endpoints
+@router.get("/microsoft/login")
+async def microsoft_login():
+    """Initiate Microsoft OAuth login."""
+    if not config.MICROSOFT_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Microsoft OAuth not configured")
+    
+    params = {
+        "client_id": config.MICROSOFT_CLIENT_ID,
+        "redirect_uri": config.MICROSOFT_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "response_mode": "query"
+    }
+    
+    microsoft_auth_url = f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?{urlencode(params)}"
+    print(f"Redirecting to Microsoft: {microsoft_auth_url}")
+    return RedirectResponse(url=microsoft_auth_url, status_code=302)
+
+
+@router.get("/microsoft/callback")
+async def microsoft_callback(code: str, db: Session = Depends(get_db)):
+    """Handle Microsoft OAuth callback."""
+    try:
+        # Exchange code for token
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(
+                "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+                data={
+                    "code": code,
+                    "client_id": config.MICROSOFT_CLIENT_ID,
+                    "client_secret": config.MICROSOFT_CLIENT_SECRET,
+                    "redirect_uri": config.MICROSOFT_REDIRECT_URI,
+                    "grant_type": "authorization_code"
+                }
+            )
+            
+            print(f"Microsoft token response status: {token_response.status_code}")
+            print(f"Microsoft token response: {token_response.text}")
+            
+            if token_response.status_code != 200:
+                raise HTTPException(status_code=400, detail=f"Failed to get access token: {token_response.text}")
+            
+            token_data = token_response.json()
+            access_token = token_data.get("access_token")
+
+            id_token = token_data.get("id_token")
+            user_info = jwt.decode(id_token, options={"verify_signature": False})
+        
+        email = user_info.get("email") or user_info.get("preferredUsername")
+        name = user_info.get("name")
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Email not provided by Microsoft")
+        
+        # Check if user exists
+        user = UserCRUD.get_user_by_email(db, email)
+        
+        if not user:
+            # Create new user
+            username = email.split("@")[0]
+            counter = 1
+            original_username = username
+            while UserCRUD.get_user_by_username(db, username):
+                username = f"{original_username}{counter}"
+                counter += 1
+            
+            user_data = UserCreate(
+                email=email,
+                username=username,
+                full_name=name or email.split("@")[0],
+                password="microsoft_oauth_" + email,
+                role=UserRole.RECRUITER
+            )
+            user = UserCRUD.create_user(db, user_data)
+        
+        # Generate JWT token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        jwt_token = create_access_token(
+            data={"sub": user.id, "email": user.email, "role": user.role.value},
+            expires_delta=access_token_expires
+        )
+        
+        # Redirect to frontend with token
+        frontend_url = f"http://localhost:5173/auth/microsoft/success?token={jwt_token}"
         return RedirectResponse(url=frontend_url)
     
     except Exception as e:

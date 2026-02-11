@@ -19,6 +19,10 @@ const RecruiterSignIn = () => {
     window.location.href = "http://localhost:8000/api/v1/auth/google/login";
   };
 
+  const handleMicrosoftLogin = () => {
+    window.location.href = "http://localhost:8000/api/v1/auth/microsoft/login";
+  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -151,7 +155,7 @@ const RecruiterSignIn = () => {
                 </svg>
                 Continue with Google
               </button>
-              <button className="w-full border-2 border-gray-200 rounded-xl py-3.5 flex items-center gap-3 justify-center text-sm font-medium hover:border-emerald-500 hover:bg-emerald-50 transition-all">
+              <button onClick={handleMicrosoftLogin} type="button" className="w-full border-2 border-gray-200 rounded-xl py-3.5 flex items-center gap-3 justify-center text-sm font-medium hover:border-emerald-500 hover:bg-emerald-50 transition-all">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#f25022" d="M0 0h11.5v11.5H0z" />
                   <path fill="#00a4ef" d="M12.5 0H24v11.5H12.5z" />
