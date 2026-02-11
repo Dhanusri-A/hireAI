@@ -30,7 +30,6 @@ const GoogleCallback = () => {
     if (token) {
       // Decode JWT to get user info
       const decodedToken = decodeJWT(token);
-      console.log('Decoded token:', decodedToken); // Debug log
       
       const userData = {
         access_token: token,
@@ -43,14 +42,12 @@ const GoogleCallback = () => {
         }
       };
       
-      console.log('User data:', userData); // Debug log
+      // Update auth context and localStorage synchronously
       login(userData);
       toast.success("Signed in with Google successfully!");
       
-      // Add a small delay to ensure auth context is updated
-      setTimeout(() => {
-        navigate("/recruiter", { replace: true });
-      }, 100);
+      // Navigate immediately - auth state is already updated in localStorage
+      window.location.href = "/recruiter";
     } else if (error) {
       toast.error(`Google login failed: ${error}`);
       navigate("/recruiter-signin", { replace: true });
