@@ -179,6 +179,7 @@ export default function RecruiterLandingPage() {
             { label: "Offers", val: "3", icon: FileText, color: "orange" },
           ].map((stat, i) => (
             <motion.div
+              key={i}
               custom={i}
               variants={fadeUp}
               initial="hidden"
@@ -279,6 +280,7 @@ export default function RecruiterLandingPage() {
             "Hired",
           ].map((step, i) => (
             <motion.div
+              key={i}
               whileHover={{ scale: 1.03 }}
               transition={{ duration: 0.2, ease: EASE }}
               className="bg-gray-50/50 rounded-2xl p-6 text-center border border-transparent hover:border-emerald-200 hover:bg-white hover:shadow-lg cursor-pointer transform-gpu"

@@ -12,6 +12,7 @@ import CandidateJobDetails from "./screens/Candidate/components/CandidateJobDeta
 import CandidateProfileEdit from "./screens/Candidate/components/CandidateProfileEdit";
 import GoogleCallback from "./screens/Login/GoogleCallback";
 import MicrosoftCallback from "./screens/Login/MicrosoftCallback";
+import ForgotPassword from "./screens/Login/ForgotPassword";
 
 // Candidate Auth
 import CandidateSignIn from "./screens/Login/CandidateSignin";
@@ -56,6 +57,7 @@ function AppRoutes() {
       {/* Recruiter Auth */}
       <Route path="/recruiter-signin" element={<RecruiterSignIn />} />
       <Route path="/recruiter-signup" element={<RecruiterSignUp />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/auth/google/success" element={<GoogleCallback />} />
       <Route path="/auth/google/error" element={<GoogleCallback />} />
       <Route path="/auth/microsoft/success" element={<MicrosoftCallback />} />

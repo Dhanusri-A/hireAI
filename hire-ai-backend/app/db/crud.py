@@ -45,7 +45,6 @@ class UserCRUD:
             raise ValueError(f"Email {user_data.email} already registered")
         if UserCRUD.get_user_by_username(db, user_data.username):
             raise ValueError(f"Username {user_data.username} already taken")
-        print("CREATE_USER PASSWORD:", repr(user_data.password), len(user_data.password))
 
         # Create user with hashed password
         db_user = User(

@@ -1,17 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from datetime import timedelta, datetime
 import httpx
 import jwt
 from urllib.parse import urlencode
 
 from app.db.base import get_db
 from app.db.crud import UserCRUD
-from app.db.models import UserRole
+from app.db.models import UserRole, OTP
 from app.schemas.user import UserCreate, UserLogin, UserResponse
-from app.core.security import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.schemas.otp import SendOTPRequest, VerifyOTPRequest, ResetPasswordRequest
+from app.core.security import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, hash_password
 from app.core import config
+from app.core.email import generate_otp, send_otp_email
 from app.api.v1.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -78,7 +80,6 @@ async def google_login():
     }
     
     google_auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
-    print(f"Redirecting to Google: {google_auth_url}")
     return RedirectResponse(url=google_auth_url, status_code=302)
 
 
@@ -174,7 +175,6 @@ async def microsoft_login():
     }
     
     microsoft_auth_url = f"https://login.microsoftonline.com/common/oauth2/v2.0/authorize?{urlencode(params)}"
-    print(f"Redirecting to Microsoft: {microsoft_auth_url}")
     return RedirectResponse(url=microsoft_auth_url, status_code=302)
 
 
@@ -194,9 +194,6 @@ async def microsoft_callback(code: str, db: Session = Depends(get_db)):
                     "grant_type": "authorization_code"
                 }
             )
-            
-            print(f"Microsoft token response status: {token_response.status_code}")
-            print(f"Microsoft token response: {token_response.text}")
             
             if token_response.status_code != 200:
                 raise HTTPException(status_code=400, detail=f"Failed to get access token: {token_response.text}")
@@ -248,3 +245,95 @@ async def microsoft_callback(code: str, db: Session = Depends(get_db)):
     except Exception as e:
         error_url = f"http://localhost:5173/recruiter-signin?error={str(e)}"
         return RedirectResponse(url=error_url)
+
+# OTP endpoints
+@router.post("/send-otp")
+async def send_otp(request: SendOTPRequest, db: Session = Depends(get_db)):
+    """Send OTP to email."""
+    # Check if email exists for reset_password
+    if request.purpose == "reset_password":
+        user = UserCRUD.get_user_by_email(db, request.email)
+        if not user:
+            raise HTTPException(status_code=404, detail="Email not found")
+    elif request.purpose == "signup":
+        # Check if email already registered
+        user = UserCRUD.get_user_by_email(db, request.email)
+        if user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Generate OTP
+    otp_code = generate_otp()
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    
+    # Delete old OTPs for this email and purpose
+    db.query(OTP).filter(
+        OTP.email == request.email,
+        OTP.purpose == request.purpose
+    ).delete()
+    
+    # Save OTP to database
+    db_otp = OTP(
+        email=request.email,
+        otp=otp_code,
+        purpose=request.purpose,
+        expires_at=expires_at
+    )
+    db.add(db_otp)
+    db.commit()
+    
+    # Send email
+    if await send_otp_email(request.email, otp_code, request.purpose):
+        return {"message": "OTP sent successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to send OTP")
+
+
+@router.post("/verify-otp")
+async def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
+    """Verify OTP."""
+    otp_record = db.query(OTP).filter(
+        OTP.email == request.email,
+        OTP.otp == request.otp,
+        OTP.purpose == request.purpose,
+        OTP.is_verified == False
+    ).first()
+    
+    if not otp_record:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    
+    if datetime.utcnow() > otp_record.expires_at:
+        raise HTTPException(status_code=400, detail="OTP expired")
+    
+    otp_record.is_verified = True
+    db.commit()
+    
+    return {"message": "OTP verified successfully"}
+
+
+@router.post("/reset-password")
+async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Reset password using verified OTP."""
+    # Check if OTP is verified
+    otp_record = db.query(OTP).filter(
+        OTP.email == request.email,
+        OTP.otp == request.otp,
+        OTP.purpose == "reset_password",
+        OTP.is_verified == True
+    ).first()
+    
+    if not otp_record:
+        raise HTTPException(status_code=400, detail="OTP not verified")
+    
+    # Update password
+    user = UserCRUD.get_user_by_email(db, request.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.hashed_password = hash_password(request.new_password)
+    db.commit()
+    
+    # Delete used OTP
+    db.delete(otp_record)
+    db.commit()
+    
+    return {"message": "Password reset successfully"}

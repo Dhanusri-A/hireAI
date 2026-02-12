@@ -428,3 +428,19 @@ class WorkExperience(Base):
 
     def __repr__(self) -> str:
         return f"<WorkExperience(id={self.id}, candidate_profile_id={self.candidate_profile_id}, company_name='{self.company_name}')>"
+
+
+class OTP(Base):
+    """OTP verification model."""
+    __tablename__ = "otps"
+    
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    otp: Mapped[str] = mapped_column(String(6), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(50), nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<OTP(email={self.email}, purpose={self.purpose}, is_verified={self.is_verified})>"

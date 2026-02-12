@@ -16,6 +16,7 @@ import { Mail, Lock, Key, User, ChevronRight, ArrowRight } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import { signup, sendOTP, verifyOTP } from "../../api/api";
 
 const CandidateSignUp = () => {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ const CandidateSignUp = () => {
       throw new Error("Passwords do not match");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -63,14 +64,11 @@ const CandidateSignUp = () => {
         validateForm();
         setIsLoading(true);
 
-        toast.loading("Sending OTP...");
-        setTimeout(() => {
-          toast.dismiss();
-          toast.success("OTP sent (mock)");
-          setShowOtp(true);
-          setModalOpen(true);
-          setIsLoading(false);
-        }, 1000);
+        await sendOTP(formData.email, "signup");
+        toast.success("OTP sent to your email");
+        setShowOtp(true);
+        setModalOpen(true);
+        setIsLoading(false);
       } else {
         if (!hasAgreed) {
           setModalOpen(true);
@@ -81,17 +79,25 @@ const CandidateSignUp = () => {
           throw new Error("Enter valid 6-digit OTP");
 
         setIsLoading(true);
-        toast.loading("Creating account...");
+        
+        await verifyOTP(formData.email, formData.otp, "signup");
+        
+        const payload = {
+          full_name: formData.fullName,
+          username: formData.email.split("@")[0],
+          email: formData.email,
+          password: formData.password,
+          role: "candidate",
+        };
 
-        setTimeout(() => {
-          toast.dismiss();
-          toast.success("Account created successfully!");
-          navigate("/buildresume", { replace: true });
-        }, 1200);
+        await signup(payload);
+        toast.success("Account created successfully!");
+        navigate("/candidate-signin", { replace: true });
       }
     } catch (err) {
-      setError(err.message);
-      toast.error(err.message);
+      const errorMsg = err.detail || err.message || "An error occurred";
+      setError(errorMsg);
+      toast.error(errorMsg);
       setIsLoading(false);
     }
   };
@@ -342,7 +348,7 @@ const CandidateSignUp = () => {
           </div>
           
           <div className="bg-slate-900/50 rounded-xl p-4 mb-6 max-h-48 overflow-y-auto">
-            <Typography className="text-slate-300 text-sm leading-relaxed">
+            <div className="text-slate-300 text-sm leading-relaxed">
               By registering as a candidate, you agree to:
               <ul className="mt-2 space-y-1 ml-4">
                 <li>• Provide accurate and truthful information</li>
@@ -350,7 +356,7 @@ const CandidateSignUp = () => {
                 <li>• Allow us to share your profile with recruiters</li>
                 <li>• Receive job-related communications</li>
               </ul>
-            </Typography>
+            </div>
           </div>
         </DialogContent>
         <DialogActions sx={{ padding: '0 32px 32px', flexDirection: 'column', gap: 2 }}>
