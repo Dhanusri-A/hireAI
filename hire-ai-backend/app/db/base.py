@@ -29,8 +29,3 @@ def get_db():
 def create_tables():
     """Create all tables defined in models."""
     Base.metadata.create_all(bind=engine)
-
-
-def drop_tables():
-    """Drop all tables (use with caution)."""
-    Base.metadata.drop_all(bind=engine)

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -24,6 +24,25 @@ const RecruiterSignUp = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [timer, setTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+  const [resendsRemaining, setResendsRemaining] = useState(2);
+
+  useEffect(() => {
+    let interval;
+    if (step === 2 && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step, timer]);
 
   const handleChange = (e) =>
     setForm((s) => ({ ...s, [e.target.name]: e.target.value }));
@@ -44,9 +63,14 @@ const handleSubmit = async (e) => {
   setLoading(true);
 
   try {
-    await sendOTP(form.email, "signup");
+    const response = await sendOTP(form.email, "signup");
     toast.success("OTP sent to your email");
+    if (response.resends_remaining !== undefined) {
+      setResendsRemaining(response.resends_remaining);
+    }
     setStep(2);
+    setTimer(60);
+    setCanResend(false);
   } catch (err) {
     if (err.detail && Array.isArray(err.detail)) {
       err.detail.forEach((e) => {
@@ -329,14 +353,31 @@ const handleVerifyOTP = async (otpValue) => {
                     Enter 6-digit OTP sent to {form.email}
                   </label>
                   <OTPInput length={6} onComplete={handleVerifyOTP} disabled={loading} />
+                  
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-gray-600">
+                      {timer > 0 ? (
+                        <span className="font-semibold text-emerald-600">
+                          Time remaining: {timer}s
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-red-600">
+                          OTP expired
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {resendsRemaining > 0 ? `${resendsRemaining} resend(s) remaining` : "No resends remaining"}
+                    </p>
+                  </div>
                 </div>
 
                 <button
                   onClick={() => handleSubmit({ preventDefault: () => {} })}
-                  disabled={loading}
-                  className="w-full text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                  disabled={loading || !canResend}
+                  className="w-full text-sm text-emerald-600 hover:text-emerald-700 font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
                 >
-                  Resend OTP
+                  {canResend ? "Resend OTP" : `Resend OTP (${timer}s)`}
                 </button>
 
                 <button

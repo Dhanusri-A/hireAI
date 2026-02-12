@@ -15,6 +15,9 @@ def generate_otp() -> str:
 def _send_email_sync(to_email: str, otp: str, purpose: str):
     """Synchronous email sending function."""
     try:
+        if not config.SMTP_USER or not config.SMTP_PASSWORD:
+            return False
+            
         subject = f"Your OTP for {purpose.replace('_', ' ').title()}"
         body = f"""
         <html>
@@ -25,7 +28,7 @@ def _send_email_sync(to_email: str, otp: str, purpose: str):
                     <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
                         <h1 style="color: #10b981; letter-spacing: 8px; margin: 0; font-size: 36px;">{otp}</h1>
                     </div>
-                    <p style="color: #6b7280; font-size: 14px;">This code will expire in 10 minutes.</p>
+                    <p style="color: #6b7280; font-size: 14px;">This code will expire in 1 minute.</p>
                     <p style="color: #6b7280; font-size: 14px;">If you didn't request this, please ignore this email.</p>
                     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
                     <p style="color: #9ca3af; font-size: 12px; text-align: center;">HireAI - AI-Powered Recruitment Platform</p>
@@ -46,8 +49,7 @@ def _send_email_sync(to_email: str, otp: str, purpose: str):
             server.send_message(msg)
         
         return True
-    except Exception as e:
-        print(f"Error sending email: {str(e)}")
+    except Exception:
         return False
 
 async def send_otp_email(to_email: str, otp: str, purpose: str = "signup"):

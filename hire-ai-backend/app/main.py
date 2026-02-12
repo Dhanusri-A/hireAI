@@ -10,13 +10,8 @@ from app.api.v1 import auth_routes, user_routes, jobs_routes, recruiters_routes,
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    # Startup: Create tables
-    print("Creating database tables...")
     create_tables()
-    print("Database tables created successfully!")
     yield
-    # Shutdown
-    print("Application shutting down...")
 
 
 app = FastAPI(

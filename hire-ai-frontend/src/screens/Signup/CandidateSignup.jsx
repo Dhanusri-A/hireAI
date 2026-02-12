@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Button,
@@ -32,6 +32,9 @@ const CandidateSignUp = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [timer, setTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+  const [resendsRemaining, setResendsRemaining] = useState(2);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -39,6 +42,22 @@ const CandidateSignUp = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [hasAgreed, setHasAgreed] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+
+  useEffect(() => {
+    let interval;
+    if (showOtp && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [showOtp, timer]);
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -64,11 +83,16 @@ const CandidateSignUp = () => {
         validateForm();
         setIsLoading(true);
 
-        await sendOTP(formData.email, "signup");
+        const response = await sendOTP(formData.email, "signup");
         toast.success("OTP sent to your email");
+        if (response.resends_remaining !== undefined) {
+          setResendsRemaining(response.resends_remaining);
+        }
         setShowOtp(true);
         setModalOpen(true);
         setIsLoading(false);
+        setTimer(60);
+        setCanResend(false);
       } else {
         if (!hasAgreed) {
           setModalOpen(true);
@@ -249,22 +273,40 @@ const CandidateSignUp = () => {
           />
 
           {showOtp && (
-            <TextField
-              id="otp"
-              label="Enter 6-digit OTP"
-              value={formData.otp}
-              onChange={handleChange}
-              placeholder="000000"
-              inputProps={{ maxLength: 6 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Key className="text-slate-400" size={20} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={inputStyles}
-            />
+            <>
+              <TextField
+                id="otp"
+                label="Enter 6-digit OTP"
+                value={formData.otp}
+                onChange={handleChange}
+                placeholder="000000"
+                inputProps={{ maxLength: 6 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Key className="text-slate-400" size={20} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={inputStyles}
+              />
+              <div className="text-center">
+                <p className="text-sm text-slate-300">
+                  {timer > 0 ? (
+                    <span className="font-semibold text-emerald-400">
+                      Time remaining: {timer}s
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-red-400">
+                      OTP expired
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {resendsRemaining > 0 ? `${resendsRemaining} resend(s) remaining` : "No resends remaining"}
+                </p>
+              </div>
+            </>
           )}
 
           {error && (

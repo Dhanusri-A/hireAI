@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowLeft } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
@@ -12,6 +12,25 @@ const ForgotPassword = () => {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [timer, setTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+  const [resendsRemaining, setResendsRemaining] = useState(2);
+
+  useEffect(() => {
+    let interval;
+    if (step === 2 && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step, timer]);
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -22,9 +41,14 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      await sendOTP(email, "reset_password");
+      const response = await sendOTP(email, "reset_password");
       toast.success("OTP sent to your email");
+      if (response.resends_remaining !== undefined) {
+        setResendsRemaining(response.resends_remaining);
+      }
       setStep(2);
+      setTimer(60);
+      setCanResend(false);
     } catch (err) {
       toast.error(err.detail || err.message || "Failed to send OTP");
     } finally {
@@ -126,14 +150,31 @@ const ForgotPassword = () => {
                   Enter 6-digit OTP
                 </label>
                 <OTPInput length={6} onComplete={handleVerifyOTP} disabled={loading} />
+                
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600">
+                    {timer > 0 ? (
+                      <span className="font-semibold text-emerald-600">
+                        Time remaining: {timer}s
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-red-600">
+                        OTP expired
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {resendsRemaining > 0 ? `${resendsRemaining} resend(s) remaining` : "No resends remaining"}
+                  </p>
+                </div>
               </div>
 
               <button
                 onClick={() => handleSendOTP({ preventDefault: () => {} })}
-                disabled={loading}
-                className="w-full text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                disabled={loading || !canResend}
+                className="w-full text-sm text-emerald-600 hover:text-emerald-700 font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
               >
-                Resend OTP
+                {canResend ? "Resend OTP" : `Resend OTP (${timer}s)`}
               </button>
             </div>
           )}
