@@ -2,9 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.api.v1.deps import get_current_user, require_role
 from app.db.base import get_db
-from app.db.crud import UserCRUD
-from app.schemas.recruiter import RecruiterCreate, RecruiterUpdate, RecruiterResponse
-from app.db.models import UserRole
+from app.db.crud import UserCRUD, RecruiterProfileCRUD
+from app.schemas.recruiter import (
+    RecruiterCreate, RecruiterUpdate, RecruiterResponse,
+    RecruiterProfileCreate, RecruiterProfileResponse,
+)
+from app.db.models import UserRole, User
 
 router = APIRouter(
     prefix="/recruiters",
@@ -117,3 +120,43 @@ def delete_recruiter(
             detail="Failed to delete recruiter"
         )
     return None
+
+
+# ── Recruiter Company Profile ────────────────────────────────────────────────
+
+@router.post("/profile", response_model=RecruiterProfileResponse, status_code=status.HTTP_201_CREATED)
+def create_recruiter_profile(
+    profile_data: RecruiterProfileCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    user=Depends(require_role("recruiter")),
+):
+    existing = RecruiterProfileCRUD.get_by_user_id(db, current_user.id)
+    if existing:
+        raise HTTPException(status_code=400, detail="Company profile already exists")
+    return RecruiterProfileCRUD.create(db, current_user.id, profile_data.model_dump())
+
+
+@router.get("/profile/me", response_model=RecruiterProfileResponse)
+def get_my_recruiter_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    user=Depends(require_role("recruiter")),
+):
+    profile = RecruiterProfileCRUD.get_by_user_id(db, current_user.id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Company profile not found")
+    return profile
+
+
+@router.put("/profile/me", response_model=RecruiterProfileResponse)
+def update_recruiter_profile(
+    profile_data: RecruiterProfileCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    user=Depends(require_role("recruiter")),
+):
+    updated = RecruiterProfileCRUD.update(db, current_user.id, profile_data.model_dump(exclude_unset=True))
+    if not updated:
+        raise HTTPException(status_code=404, detail="Company profile not found")
+    return updated

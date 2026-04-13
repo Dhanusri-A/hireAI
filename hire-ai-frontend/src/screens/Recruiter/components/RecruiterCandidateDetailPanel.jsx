@@ -133,7 +133,7 @@ export function RecruiterCandidateDetailPanel({
                 </div>
                 <div className="flex items-center gap-1">
                   <Briefcase className="w-4 h-4" />
-                  {candidate.experienceRaw || (candidate.experience + " yrs")}
+                  {candidate.experienceLabel}
                 </div>
                 {candidate.phone && (
                   <div className="flex items-center gap-1">

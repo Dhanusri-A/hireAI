@@ -14,6 +14,7 @@ const RecruiterSignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showMFAFlow, setShowMFAFlow] = useState(false);
+  const [mfaSetupRequired, setMfaSetupRequired] = useState(false);
 
   const navigate = useNavigate();
 
@@ -34,6 +35,7 @@ const RecruiterSignIn = () => {
 
       // Check if MFA setup or code is required
       if (data.mfa_setup_required || data.mfa_required) {
+        setMfaSetupRequired(!!data.mfa_setup_required);
         setShowMFAFlow(true);
         setLoading(false);
         return;
@@ -186,7 +188,8 @@ const RecruiterSignIn = () => {
           ) : (
             <MFAFlow 
               email={email} 
-              password={password} 
+              password={password}
+              mfaSetupRequired={mfaSetupRequired}
               onLoginSuccess={handleMFALoginSuccess}
             />
           )}

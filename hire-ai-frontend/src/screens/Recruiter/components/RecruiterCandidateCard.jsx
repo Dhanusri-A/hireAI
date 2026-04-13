@@ -47,7 +47,7 @@ export function RecruiterCandidateCard({ candidate, isSelected, onSelect, onClic
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-700">
           <Briefcase className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          {candidate.experience} {candidate.experience === 1 ? 'year' : 'years'} experience
+          {candidate.experienceLabel}
         </div>
       </div>
 

@@ -329,11 +329,14 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
                 role=UserRole.RECRUITER
             )
             user = UserCRUD.create_user(db, user_data)
+        else:
+            # Refresh to ensure we have the latest data (mfa_enabled, mfa_secret, etc.)
+            db.refresh(user)
         
         # Generate JWT token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         jwt_token = create_access_token(
-            data={"sub": user.id, "email": user.email, "role": user.role.value, "full_name": user.full_name},
+            data={"sub": user.id, "email": user.email, "role": user.role.value, "full_name": user.full_name, "mfa_enabled": user.mfa_enabled},
             expires_delta=access_token_expires
         )
         
@@ -421,11 +424,13 @@ async def microsoft_callback(code: str, db: Session = Depends(get_db)):
                 role=UserRole.RECRUITER
             )
             user = UserCRUD.create_user(db, user_data)
+        else:
+            db.refresh(user)
         
         # Generate JWT token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         jwt_token = create_access_token(
-            data={"sub": user.id, "email": user.email, "role": user.role.value},
+            data={"sub": user.id, "email": user.email, "role": user.role.value, "mfa_enabled": user.mfa_enabled},
             expires_delta=access_token_expires
         )
         

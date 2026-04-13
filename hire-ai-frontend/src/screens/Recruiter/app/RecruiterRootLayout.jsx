@@ -161,13 +161,13 @@ export default function RecruiterRootLayout() {
                 <p className="text-xs text-gray-500 truncate">{user?.email}</p>
               </div>
 
-              {/* <button
+              <button
                 onClick={() => navigate("/recruiter/profile")}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition-all duration-150 hover:pl-5"
               >
                 <UserIcon size={16} />
                 View Profile
-              </button> */}
+              </button>
 
               <button
                 onClick={() => setShowLogoutDialog(true)}

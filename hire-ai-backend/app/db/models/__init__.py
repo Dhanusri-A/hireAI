@@ -14,6 +14,7 @@ from app.db.models.interview import Interview
 from app.db.models.interview_recording import InterviewRecording
 from app.db.models.otp import OTP
 from app.db.models.interview_section_config import InterviewSectionConfig
+from app.db.models.recruiter_profile import RecruiterProfile
 
 __all__ = [
     # Enums
@@ -31,4 +32,5 @@ __all__ = [
     "InterviewRecording",
     "OTP",
     "InterviewSectionConfig",
+    "RecruiterProfile",
 ]

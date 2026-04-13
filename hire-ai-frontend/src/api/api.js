@@ -502,3 +502,34 @@ export const getProfileUploadUrl = async (userId, fileType) => {
     handleError(error, "Failed to get profile image upload URL");
   }
 };
+
+// ────────────────────────────────────────────────
+// Recruiter Company Profile
+// ────────────────────────────────────────────────
+export const createRecruiterProfile = async (payload) => {
+  try {
+    const response = await api.post("/recruiters/profile", payload);
+    return response.data;
+  } catch (error) {
+    handleError(error, "Failed to save company profile");
+  }
+};
+
+export const getRecruiterProfile = async () => {
+  try {
+    const response = await api.get("/recruiters/profile/me");
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) return null;
+    handleError(error, "Failed to fetch company profile");
+  }
+};
+
+export const updateRecruiterProfile = async (payload) => {
+  try {
+    const response = await api.put("/recruiters/profile/me", payload);
+    return response.data;
+  } catch (error) {
+    handleError(error, "Failed to update company profile");
+  }
+};

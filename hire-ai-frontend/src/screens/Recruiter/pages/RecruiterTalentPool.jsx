@@ -64,9 +64,10 @@ function getStatusColor(status) {
 }
 
 function mapCandidate(c) {
-  // experience: "1–3 years" → extract first number → 1
-  const expRaw = (c.total_years_experience || "0").replace(/[–—-]/g, "-");
-  const expNum = parseInt(expRaw.match(/\d+/)?.[0] || "0") || 0;
+  const expRaw = c.total_years_experience || "";
+
+  // For range filtering: use the first number as lower bound
+  const expNum = parseInt((expRaw.replace(/[–—-]/g, "-").match(/\d+/)?.[0]) || "0") || 0;
 
   return {
     id: c.id,
@@ -74,7 +75,7 @@ function mapCandidate(c) {
     title: c.title || "Not specified",
     location: c.location || "Not specified",
     experience: expNum,
-    experienceRaw: c.total_years_experience || "",  // e.g. "1–3 years"
+    experienceLabel: expRaw || "Not specified",  // full raw string e.g. "3–5 yrs"
     skills: c.skills ? c.skills.split(",").map((s) => s.trim()).filter(Boolean) : [],
     status: c.status,
     lastUpdated: getRelativeTime(c.updated_at),

@@ -60,6 +60,7 @@ import RecruiterScheduleInterviewPage from "./screens/Recruiter/pages/RecruiterS
 import RecruiterInterviewAnalysePage from "./screens/Recruiter/pages/RecruiterInterviewAnalysePage";
 import { RecruiterCandidateSourcing } from "./screens/Recruiter/pages/RecruiterCandidateSourcing";
 import RecruiterInterviewDashboard from "./screens/Recruiter/pages/RecruiterInterviewDashboard";
+import RecruiterCompanySetup from "./screens/Recruiter/pages/RecruiterCompanySetup";
 
 import GoogleCallback from "./screens/Login/GoogleCallback";
 import MicrosoftCallback from "./screens/Login/MicrosoftCallback";
@@ -109,6 +110,7 @@ function AppRoutes() {
 
       {/* ==================== RECRUITER ROUTES ==================== */}
       <Route element={<RecruiterOnly />}>
+        <Route path="/recruiter/company-setup" element={<RecruiterCompanySetup />} />
         <Route path="/recruiter" element={<RecruiterRootLayout />}>
           <Route index element={<RecruiterLandingPage />} />
           <Route path="candidate/:candidateId" element={<RecruiterViewCandidate />} />

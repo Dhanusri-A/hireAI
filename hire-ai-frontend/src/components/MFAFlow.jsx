@@ -2,43 +2,21 @@ import React, { useState } from "react";
 import { Shield, Download, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
 
-const MFAFlow = ({ email, password, onLoginSuccess }) => {
-  const [step, setStep] = useState("setup"); // setup, verify_setup, enter_code, backup
+const MFAFlow = ({ email, password, mfaSetupRequired, onLoginSuccess }) => {
+  const [step, setStep] = useState(mfaSetupRequired ? "setup" : "enter_code");
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState("");
   const [secret, setSecret] = useState("");
   const [code, setCode] = useState("");
   const [backupCodes, setBackupCodes] = useState([]);
-  const [isSetupFlow, setIsSetupFlow] = useState(true);
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
-  // Initialize - check if setup or just code entry
   React.useEffect(() => {
-    checkMFAStatus();
-  }, []);
-
-  const checkMFAStatus = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-      
-      const data = await response.json();
-      
-      if (data.mfa_setup_required) {
-        setIsSetupFlow(true);
-        handleSetupMFA();
-      } else if (data.mfa_required) {
-        setIsSetupFlow(false);
-        setStep("enter_code");
-      }
-    } catch (err) {
-      toast.error("Failed to check MFA status");
+    if (mfaSetupRequired) {
+      handleSetupMFA();
     }
-  };
+  }, []);
 
   const handleSetupMFA = async () => {
     setLoading(true);
@@ -135,10 +113,8 @@ const MFAFlow = ({ email, password, onLoginSuccess }) => {
   };
 
   const handleCompleteSetup = () => {
-    // After saving backup codes, proceed to login with MFA
     setStep("enter_code");
     setCode("");
-    setIsSetupFlow(false);
     toast.success("Now enter your MFA code to login");
   };
 

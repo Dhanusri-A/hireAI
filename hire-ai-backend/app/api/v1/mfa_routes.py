@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.v1.deps import get_current_user, require_role
 from app.db.base import get_db
 from app.schemas.mfa import (
-    MFASetupResponse, MFAVerifyResponse, 
-    MFASetupRequestUnauthenticated, MFAVerifyRequestUnauthenticated
+    MFASetupResponse, MFAVerifyResponse,
+    MFASetupRequestUnauthenticated, MFAVerifyRequestUnauthenticated,
+    MFAVerifyTokenRequest,
 )
 from app.services.mfa_service import MFAService
+from app.schemas.user import UserResponse
 
 router = APIRouter(prefix="/mfa", tags=["mfa"])
 
@@ -84,3 +87,77 @@ async def verify_mfa_unauthenticated(
         message="MFA enabled successfully",
         backup_codes=backup_codes
     )
+
+
+# ── Token-based MFA (for OAuth users who have no password) ──────────────────
+
+@router.post("/setup", response_model=MFASetupResponse)
+async def setup_mfa_token(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Generate QR code for MFA setup using Bearer token (OAuth flow)."""
+    from app.db.crud import UserCRUD
+    user = UserCRUD.get_user_by_id(db, current_user.id)
+    if user.mfa_enabled:
+        raise HTTPException(status_code=400, detail="MFA is already enabled")
+
+    # Guard: if secret already exists but mfa not enabled yet, reuse it
+    if not user.mfa_secret:
+        secret = MFAService.generate_secret()
+        user.mfa_secret = secret
+        db.commit()
+    else:
+        secret = user.mfa_secret
+
+    qr_code = MFAService.generate_qr_code(user.email, secret)
+
+    return MFASetupResponse(qr_code=qr_code, secret=secret, message="Scan QR code with Microsoft Authenticator app")
+
+
+@router.post("/verify", response_model=MFAVerifyResponse)
+async def verify_mfa_token(
+    request: MFAVerifyTokenRequest,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Verify MFA code and enable MFA using Bearer token (OAuth flow)."""
+    from app.db.crud import UserCRUD
+    user = UserCRUD.get_user_by_id(db, current_user.id)
+
+    if not user.mfa_secret:
+        raise HTTPException(status_code=400, detail="MFA setup not initiated")
+
+    if not MFAService.verify_code(user.mfa_secret, request.code):
+        raise HTTPException(status_code=400, detail="Invalid MFA code")
+
+    backup_codes = MFAService.generate_backup_codes()
+    user.mfa_backup_codes = MFAService.hash_backup_codes(backup_codes)
+    user.mfa_enabled = True
+    db.commit()
+
+    return MFAVerifyResponse(success=True, message="MFA enabled successfully", backup_codes=backup_codes)
+
+
+@router.post("/verify-login", response_model=MFAVerifyResponse)
+async def verify_mfa_login(
+    request: MFAVerifyTokenRequest,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Validate MFA code for an already-enabled OAuth user (no re-enabling)."""
+    from app.db.crud import UserCRUD
+    user = UserCRUD.get_user_by_id(db, current_user.id)
+
+    if not user.mfa_enabled or not user.mfa_secret:
+        raise HTTPException(status_code=400, detail="MFA not enabled")
+
+    is_valid = MFAService.verify_code(user.mfa_secret, request.code)
+
+    if not is_valid and user.mfa_backup_codes:
+        is_valid = MFAService.verify_backup_code(user.mfa_backup_codes, request.code)
+
+    if not is_valid:
+        raise HTTPException(status_code=401, detail="Invalid MFA code")
+
+    return MFAVerifyResponse(success=True, message="MFA verified")

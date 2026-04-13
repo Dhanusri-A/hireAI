@@ -4,6 +4,7 @@ from app.db.crud.candidate_profile import CandidateProfileCRUD
 from app.db.crud.education import EducationCRUD
 from app.db.crud.work_experience import WorkExperienceCRUD
 from app.db.crud.certification import CertificationCRUD
+from app.db.crud.recruiter_profile import RecruiterProfileCRUD
 
 __all__ = [
     "UserCRUD",
@@ -12,4 +13,5 @@ __all__ = [
     "EducationCRUD",
     "WorkExperienceCRUD",
     "CertificationCRUD",
+    "RecruiterProfileCRUD",
 ]

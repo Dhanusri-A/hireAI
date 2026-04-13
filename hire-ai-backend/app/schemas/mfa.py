@@ -24,3 +24,6 @@ class MFAVerifyRequestUnauthenticated(BaseModel):
     email: EmailStr
     password: str
     code: str
+
+class MFAVerifyTokenRequest(BaseModel):
+    code: str

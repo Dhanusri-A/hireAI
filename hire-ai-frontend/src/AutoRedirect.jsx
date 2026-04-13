@@ -14,7 +14,6 @@ const AutoRedirect = () => {
     const path = location.pathname;
 
     const authRoutes = [
-      "/",
       "/candidate-signin",
       "/candidate-signup",
       "/recruiter-signin",
@@ -22,9 +21,9 @@ const AutoRedirect = () => {
     ];
 
     if (isAuthenticated && authRoutes.includes(path)) {
-      navigate(role === "recruiter" ? "/recruiter" : "/candidate", {
-        replace: true,
-      });
+      if (role === "candidate" && (path === "/candidate-signin" || path === "/candidate-signup")) {
+        navigate("/candidate", { replace: true });
+      }
       return;
     }
 
